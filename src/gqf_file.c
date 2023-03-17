@@ -7,6 +7,8 @@
  * ============================================================================
  */
 
+#define _POSIX_C_SOURCE 200112L
+#define _GNU_SOURCE
 #include <stdlib.h>
 #if 0
 # include <assert.h>
@@ -19,9 +21,11 @@
 #include <unistd.h>
 #include <math.h>
 #include <time.h>
+#include <sys/types.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <errno.h>
 
 #include "hashutil.h"
 #include "gqf.h"
@@ -29,6 +33,23 @@
 #include "gqf_file.h"
 
 #define NUM_SLOTS_TO_LOCK (1ULL<<16)
+
+static int macos_fallocate(int fd, off_t offset, off_t len)
+{
+    off_t size = lseek(fd, 0, SEEK_END);
+    if (size == -1) {
+        return errno;
+    }
+
+    if (offset + len > size) {
+        int ret = ftruncate(fd, offset + len);
+        if (ret == -1) {
+            return errno;
+        }
+    }
+
+    return 0;
+}
 
 bool qf_initfile(QF *qf, uint64_t nslots, uint64_t key_bits, uint64_t
 								 value_bits, enum qf_hashmode hash, uint32_t seed, const char*
@@ -49,7 +70,7 @@ bool qf_initfile(QF *qf, uint64_t nslots, uint64_t key_bits, uint64_t
 		perror("Couldn't open file.");
 		exit(EXIT_FAILURE);
 	}
-	ret = posix_fallocate(qf->runtimedata->f_info.fd, 0, total_num_bytes);
+	ret = macos_fallocate(qf->runtimedata->f_info.fd, 0, total_num_bytes);
 	if (ret < 0) {
 		perror("Couldn't fallocate file:\n");
 		exit(EXIT_FAILURE);
@@ -61,7 +82,7 @@ bool qf_initfile(QF *qf, uint64_t nslots, uint64_t key_bits, uint64_t
 		perror("Couldn't mmap metadata.");
 		exit(EXIT_FAILURE);
 	}
-	ret = madvise(qf->metadata, total_num_bytes, MADV_RANDOM);
+	ret = posix_madvise(qf->metadata, total_num_bytes, POSIX_MADV_RANDOM);
 	if (ret < 0) {
 		perror("Couldn't fallocate file.");
 		exit(EXIT_FAILURE);
@@ -365,7 +386,7 @@ static void make_madvise_calls(const QF *qf, uint64_t oldrun, uint64_t newrun)
     return;
   
   while (oldblock < newblock) {
-    madvise(oldblock, page_size * MADVISE_GRANULARITY, MADV_DONTNEED);
+    posix_madvise(oldblock, page_size * MADVISE_GRANULARITY, POSIX_MADV_DONTNEED);
     oldblock += page_size * MADVISE_GRANULARITY;
   }
 }

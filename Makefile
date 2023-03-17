@@ -27,9 +27,10 @@ CC = gcc -std=gnu11
 CXX = g++ -std=c++11
 LD= gcc -std=gnu11
 
-CXXFLAGS = -Wall $(DEBUG) $(PROFILE) $(OPT) $(ARCH) -m64 -I. -Iinclude
+CXXFLAGS = -Wall $(DEBUG) $(PROFILE) $(OPT) $(ARCH) -m64 -I. -Iinclude \
+					 -I/opt/homebrew/include
 
-LDFLAGS = $(DEBUG) $(PROFILE) $(OPT) -lpthread -lssl -lcrypto -lm
+LDFLAGS = $(DEBUG) $(PROFILE) $(OPT) -lpthread -lsodium -lm -L/opt/homebrew/lib
 
 #
 # declaration of dependencies
@@ -97,4 +98,3 @@ $(OBJDIR):
 
 clean:
 	rm -rf $(OBJDIR) $(TARGETS) core
-

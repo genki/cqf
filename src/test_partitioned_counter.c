@@ -13,7 +13,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sched.h>
-#include <linux/unistd.h>
+//#include <linux/unistd.h>
+#include <sys/sysctl.h>
 #include <sys/syscall.h>
 #include <errno.h>
 #include <time.h>

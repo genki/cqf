@@ -7,19 +7,46 @@
  * ============================================================================
  */
 
+#define _GNU_SOURCE
 #include <time.h>
 #include <sys/time.h>
 #include <sys/types.h>
-#include <openssl/rand.h>
+//#include <openssl/rand.h>
 #include <unistd.h>
 #include <math.h>
 #include <string.h>
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sodium.h>
 
 #include "include/zipf.h"
 #include "include/gqf_wrapper.h"
+
+typedef struct prng_state {
+    unsigned int seed;
+} prng_state_t;
+
+void RAND_bytes(unsigned char *buf, int num)
+{
+  randombytes_buf(buf, num);
+}
+
+int initstate_r(unsigned int seed, char *statebuf, size_t statelen, prng_state_t *state) {
+    if (statebuf == NULL || statelen < sizeof(prng_state_t)) {
+        return -1;
+    }
+    state->seed = seed;
+    return 0;
+}
+
+int random_r(prng_state_t *state, int32_t *result) {
+    if (state == NULL || result == NULL) {
+        return -1;
+    }
+    *result = rand_r(&state->seed);
+    return 0;
+}
 
 #ifndef  USE_MYRANDOM
 #define RFUN random
@@ -47,6 +74,7 @@ static float tdiff (struct timeval *start, struct timeval *end) {
 	return (end->tv_sec-start->tv_sec) +1e-6*(end->tv_usec - start->tv_usec);
 }
 
+/*
 uint64_t aes_hash2(uint64_t x)
 {
 	const uint64_t round_keys[32] =
@@ -101,7 +129,7 @@ uint64_t aes_hash2(uint64_t x)
 					 );
 
 	return output;
-}
+}*/
 
 static __uint128_t* zipf_gen(long N, long gencount, double s) {
 	int i;
@@ -182,7 +210,7 @@ typedef struct uniform_online_state {
 	unsigned int seed;
 	char *buf;
 	int STATELEN;
-	struct random_data *rand_state;
+	struct prng_state *rand_state;
 } uniform_online_state;
 
 typedef struct zipf_params {
@@ -354,7 +382,7 @@ void *uniform_online_init(uint64_t maxoutputs, __uint128_t maxvalue, void *param
 	state->seed = time(NULL);
 	state->STATELEN = 256;
 	state->buf = (char *)calloc(256, sizeof(char));
-	state->rand_state = (struct random_data *)calloc(1, sizeof(struct random_data));
+	state->rand_state = (struct prng_state *)calloc(1, sizeof(struct prng_state));
 
 	initstate_r(state->seed, state->buf, state->STATELEN, state->rand_state);
 	return (void *)state;
@@ -389,7 +417,7 @@ void *uniform_online_duplicate(void *_state)
 	
 	newstate->buf = (char *)calloc(256, sizeof(char));
 	memcpy(newstate->buf, oldstate->buf, newstate->STATELEN);
-	newstate->rand_state = (struct random_data *)calloc(1, sizeof(struct random_data));
+	newstate->rand_state = (struct prng_state *)calloc(1, sizeof(struct prng_state));
 
 	initstate_r(newstate->seed, newstate->buf, newstate->STATELEN, newstate->rand_state);
 	return newstate;

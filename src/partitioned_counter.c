@@ -12,8 +12,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sched.h>
-#include <sys/sysinfo.h>
-#include <linux/unistd.h>
+//#include <sys/sysinfo.h>
+#include <sys/sysctl.h>
+//#include <linux/unistd.h>
 #include <sys/syscall.h>
 #include <errno.h>
 
@@ -45,6 +46,27 @@ int pc_init(pc_t *pc, int64_t *global_counter, uint32_t num_counters,
 	return 0;
 }
 
+#ifdef __APPLE__
+#include <mach/mach.h>
+
+int macos_sched_getcpu() {
+    thread_port_t thread_port = mach_thread_self();
+    thread_affinity_policy_data_t policy_data;
+    mach_msg_type_number_t count = THREAD_AFFINITY_POLICY_COUNT;
+    boolean_t get_default = FALSE;
+
+    kern_return_t result = thread_policy_get(thread_port, THREAD_AFFINITY_POLICY,
+                                             (thread_policy_t)&policy_data, &count, &get_default);
+    mach_port_deallocate(mach_task_self(), thread_port);
+
+    if (result != KERN_SUCCESS) {
+        return -1;
+    }
+
+    return policy_data.affinity_tag;
+}
+#endif
+
 void pc_destructor(pc_t *pc)
 {
 	pc_sync(pc);
@@ -54,7 +76,7 @@ void pc_destructor(pc_t *pc)
 }
 	
 void pc_add(pc_t *pc, int64_t count) {
-	int cpuid = sched_getcpu();
+	int cpuid = macos_sched_getcpu();
 	uint32_t counter_id = cpuid % pc->num_counters;
 	int64_t cur_count =
 		__atomic_add_fetch(&pc->local_counters[counter_id].counter, count,

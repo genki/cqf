@@ -15,11 +15,17 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <pthread.h>
-#include <openssl/rand.h>
+//#include <openssl/rand.h>
+#include <sodium.h>
 
 #include "include/gqf.h"
 #include "include/gqf_int.h"
 #include "include/gqf_file.h"
+
+void RAND_bytes(unsigned char *buf, int num)
+{
+  randombytes_buf(buf, num);
+}
 
 typedef struct insert_args {
 	QF *cf;

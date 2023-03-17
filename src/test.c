@@ -17,11 +17,17 @@
 #include <sys/types.h>
 #include <sys/mman.h>
 #include <unistd.h>
-#include <openssl/rand.h>
+//#include <openssl/rand.h>
 
 #include "include/gqf.h"
 #include "include/gqf_int.h"
 #include "include/gqf_file.h"
+
+#include <sodium.h>
+void RAND_bytes(unsigned char *buf, int num)
+{
+  randombytes_buf(buf, num);
+}
 
 int main(int argc, char **argv)
 {

@@ -57,12 +57,13 @@
 #define DEBUG_DUMP(qf) \
 	do { if (PRINT_DEBUG) qf_dump_metadata(qf); } while (0)
 
+/*
 static __inline__ unsigned long long rdtsc(void)
 {
 	unsigned hi, lo;
 	__asm__ __volatile__ ("rdtsc" : "=a"(lo), "=d"(hi));
 	return ( (unsigned long long)lo)|( ((unsigned long long)hi)<<32 );
-}
+}*/
 
 #ifdef LOG_WAIT_TIME
 static inline bool qf_spin_lock(QF *qf, volatile int *lock, uint64_t idx,
@@ -262,6 +263,7 @@ static void modify_metadata(pc_t *metadata, int cnt)
 	return;
 }
 
+/*
 static inline int popcnt(uint64_t val)
 {
 	asm("popcnt %[val], %[val]"
@@ -269,8 +271,12 @@ static inline int popcnt(uint64_t val)
 			:
 			: "cc");
 	return val;
+}*/
+static inline int popcnt(uint64_t val) {
+    return __builtin_popcountll(val);
 }
 
+/*
 static inline int64_t bitscanreverse(uint64_t val)
 {
 	if (val == 0) {
@@ -282,6 +288,13 @@ static inline int64_t bitscanreverse(uint64_t val)
 				: "cc");
 		return val;
 	}
+}*/
+static inline int64_t bitscanreverse(uint64_t val) {
+    if (val == 0) {
+        return -1;
+    } else {
+        return 63 - __builtin_clzll(val);
+    }
 }
 
 static inline int popcntv(const uint64_t val, int ignore)
@@ -294,6 +307,7 @@ static inline int popcntv(const uint64_t val, int ignore)
 
 // Returns the number of 1s up to (and including) the pos'th bit
 // Bits are numbered from 0
+/*
 static inline int bitrank(uint64_t val, int pos) {
 	val = val & ((2ULL << pos) - 1);
 	asm("popcnt %[val], %[val]"
@@ -301,6 +315,11 @@ static inline int bitrank(uint64_t val, int pos) {
 			:
 			: "cc");
 	return val;
+}*/
+#include <stdint.h>
+static inline int bitrank(uint64_t val, int pos) {
+    val = val & ((2ULL << pos) - 1);
+    return __builtin_popcountll(val);
 }
 
 /**
